@@ -20,6 +20,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func mentionUser(user *tb.User) string {
+	if len(user.Username) > 0 {
+		return "@" + user.Username
+	}
+
+	name := user.FirstName + " " + user.LastName
+	return fmt.Sprintf("[%s](tg://user?id=%d)", name, user.ID)
+}
+
 var englishNumbers = []string{
 	"",
 	"first",
@@ -42,10 +51,6 @@ var tossCupImgs = []string{
 }
 
 type H map[string]interface{}
-
-func translateOrdinalNumberDefault(number int) string {
-	return fmt.Sprintf("%d", number)
-}
 
 func translateOrdinalNumberToEnglish(number int) string {
 	if number+1 < len(englishNumbers) {
@@ -81,7 +86,7 @@ type DrawSession struct {
 	mu sync.Mutex
 
 	Message                 *tb.Message
-	Creator                 *tb.User
+	Organizer               *tb.User
 	JoinedMembers           map[int]*tb.User
 	WinningMembers          map[int]*tb.User
 	MemberIDList            []int
@@ -167,7 +172,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 
 	var prizeEntries []PrizeEntry
 	for _, line := range lines[1:] {
-		inputs := strings.SplitN(line, ",", 2)
+		inputs := strings.SplitN(line, "x", 2)
 		if len(inputs) < 2 {
 			b.Send(m.Chat, "invalid prize entry format")
 			return
@@ -186,7 +191,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 	}
 
 	session := &DrawSession{
-		Creator:                 m.Sender,
+		Organizer:               m.Sender,
 		JoinedMembers:           make(map[int]*tb.User),
 		WinningMembers:          make(map[int]*tb.User),
 		PrizeEntries:            prizeEntries,
@@ -196,7 +201,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 	}
 
 	message, err := b.Send(m.Chat, format(b.Config.Messages.LuckyDrawStart, H{
-		"joinDuration": session.JoinDuration.String(),
+		"joinDuration": session.JoinDuration.Minutes(),
 	}), markdownOption)
 	if err != nil {
 		log.Println(err)
@@ -228,7 +233,7 @@ WaitForJoin:
 			// last 3 minutes!
 			if timeLeft <= 3*time.Minute {
 				b.Send(session.Message.Chat, format(b.Config.Messages.TimeLeftForJoin, H{
-					"timeLeft": timeLeft,
+					"timeLeft": timeLeft.Minutes(),
 				}), markdownOption)
 			}
 
@@ -298,22 +303,25 @@ WaitForJoin:
 				}), markdownOption)
 		}
 
+		numOfWinners := len(session.PrizeEntries[k].Winners)
 		for idx, winner := range session.PrizeEntries[k].Winners {
 			<-time.After(session.PrizeAnnouncementDelay)
 
-			place := translateOrdinalNumberToEnglish(idx + 1)
+			place := translateOrdinalNumberToEnglish(numOfWinners - idx)
 			b.Send(session.Message.Chat,
 				format(b.Config.Messages.WinnerIs, H{
-					"place":  place,
-					"winner": winner,
+					"place":        place,
+					"place_en":     place,
+					"place_number": numOfWinners - idx,
+					"winner":       mentionUser(winner),
 				}), markdownOption)
 
 			<-time.After(session.WinnerAnnouncementDelay)
 
 			b.Send(session.Message.Chat, format(b.Config.Messages.NotifyWinner, H{
 				"prize":     prizeEntry.Name,
-				"winner":    winner,
-				"organizer": session.Creator,
+				"winner":    mentionUser(winner),
+				"organizer": mentionUser(session.Organizer),
 			}), markdownOption)
 		}
 	}
