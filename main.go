@@ -78,7 +78,7 @@ type DrawSession struct {
 	WinningMembers          map[int]*tb.User
 	MemberIDList            []int
 	PrizeEntries            []PrizeEntry
-	Duration                time.Duration
+	JoinDuration            time.Duration
 	PrizeDelay              time.Duration
 	WinnerAnnouncementDelay time.Duration
 	IsOver                  bool
@@ -125,7 +125,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 	log.Println("handleLuckyDraw", m.Text)
 
 	if m.Private() {
-		b.Send(m.Sender, "cant not run in a private chat")
+		b.Send(m.Sender, "can not run in a private chat")
 		return
 	}
 
@@ -177,7 +177,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 		})
 	}
 
-	message, err := b.Send(m.Chat, b.Config.Messages.LuckyDrawStart)
+	message, err := b.Send(m.Chat, b.Config.Messages.LuckyDrawStart, markdownOption)
 	if err != nil {
 		log.Println(err)
 		return
@@ -189,7 +189,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 		JoinedMembers:           make(map[int]*tb.User),
 		WinningMembers:          make(map[int]*tb.User),
 		PrizeEntries:            prizeEntries,
-		Duration:                10 * time.Second,
+		JoinDuration:            5 * time.Minute,
 		PrizeDelay:              5 * time.Second,
 		WinnerAnnouncementDelay: 10 * time.Second,
 	}
@@ -203,7 +203,29 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 
 func (b *Bot) startDrawSession(session *DrawSession) {
 	// after 10 seconds, we choose the prize
-	<-time.After(session.Duration)
+	fromTime := time.Now()
+	reportTimer := time.NewTicker(1 * time.Minute)
+
+	endC := time.After(session.JoinDuration)
+WaitForJoin:
+	for {
+		select {
+		case t := <-reportTimer.C:
+			elapsed := t.Sub(fromTime).Round(time.Minute)
+			timeLeft := session.JoinDuration - elapsed
+
+			// last 3 minutes!
+			if timeLeft <= 3 * time.Minute {
+				b.Send(session.Message.Chat, format(b.Config.Messages.TimeLeftForJoin, H{
+					"timeLeft": timeLeft,
+				}))
+			}
+
+		case <-endC:
+			break WaitForJoin
+		}
+	}
+
 	session.mu.Lock()
 	defer session.mu.Unlock()
 
@@ -288,18 +310,11 @@ func (b *Bot) startDrawSession(session *DrawSession) {
 	session.IsOver = true
 }
 
-func (b *Bot) handleText(m *tb.Message) {
-	log.Println("handleText", m.Text)
-
-	if !m.IsReply() {
-		log.Println("not a reply message")
-		return
-	}
-
+func (b *Bot) handleJoinDraw(m *tb.Message) {
 	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	session, exists := b.sessions[m.Chat.ID]
+	b.mu.Unlock()
+
 	if !exists {
 		b.Send(m.Sender, b.Config.Messages.TheDrawIsNotStartedYet)
 		return
@@ -310,15 +325,37 @@ func (b *Bot) handleText(m *tb.Message) {
 		return
 	}
 
-	if m.ReplyTo.ID != session.Message.ID {
-		log.Printf("reply id %d does not match %d, message: %+v", m.ReplyTo.ID, session.Message.ID, m)
+	session.JoinedMembers[m.Sender.ID] = m.Sender
+	session.MemberIDList = append(session.MemberIDList, m.Sender.ID)
+	log.Printf("adding member %s to the session", m.Sender.Username)
+}
+
+func (b *Bot) handleText(m *tb.Message) {
+	log.Println("handleText", m.Text)
+
+	if !m.IsReply() {
 		return
 	}
 
-	session.JoinedMembers[m.Sender.ID] = m.Sender
-	session.MemberIDList = append(session.MemberIDList, m.Sender.ID)
+	b.mu.Lock()
+	session, exists := b.sessions[m.Chat.ID]
+	b.mu.Unlock()
 
-	log.Printf("adding member %s to the session", m.Sender.Username)
+	if !exists {
+		b.Send(m.Sender, b.Config.Messages.TheDrawIsNotStartedYet)
+		return
+	}
+
+	if session.IsOver {
+		b.Send(m.Sender, b.Config.Messages.TheDrawIsOver)
+		return
+	}
+
+	if m.ReplyTo.ID == session.Message.ID {
+		session.JoinedMembers[m.Sender.ID] = m.Sender
+		session.MemberIDList = append(session.MemberIDList, m.Sender.ID)
+		log.Printf("adding member %s to the session", m.Sender.Username)
+	}
 }
 
 func (b *Bot) handleHelp() {
@@ -329,6 +366,7 @@ func (b *Bot) Start() {
 	// bot.Handle(tb.OnText, ListenCreated)
 	b.Handle("/start", b.handleStart)
 	b.Handle("/luckyDraw", b.handleLuckyDraw)
+	b.Handle("/joinDraw", b.handleJoinDraw)
 	b.Handle("/help", b.handleHelp)
 	b.Handle(tb.OnText, b.handleText)
 

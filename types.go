@@ -9,6 +9,7 @@ type Config struct {
 		ThereAreNMembersJoined                     string `json:"thereAreNMembersJoined" yaml:"thereAreNMembersJoined"`
 		ThereIsOneMemberJoined                     string `json:"thereIsOneMemberJoined" yaml:"thereIsOneMemberJoined"`
 		NoOneJoined                                string `json:"noOneJoined" yaml:"noOneJoined"`
+		TimeLeftForJoin                            string `json:"timeLeftToJoin" yaml:"timeLeftToJoin"`
 		TheDrawIsOver                              string `json:"theDrawIsOver" yaml:"theDrawIsOver"`
 		TheDrawIsNotStartedYet                     string `json:"theDrawIsNotStartedYet" yaml:"theDrawIsNotStartedYet"`
 		TheDrawIsAlreadyStartedAndHasNotStoppedYet string `json:"theDrawIsAlreadyStartedAndHasNotStoppedYet" yaml:"theDrawIsAlreadyStartedAndHasNotStoppedYet"`
