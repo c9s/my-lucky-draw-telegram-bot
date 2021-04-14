@@ -1,0 +1,15 @@
+---
+messages:
+  luckyDrawStart: "A lucky draw is started!!! to join the draw please *REPLY THIS* message or type /joinDraw in {{ .joinDuration }}~~"
+  thereAreNMembersJoined: "There are {{ .numberOfMembers }} members joined this draw!"
+  thereIsOneMemberJoined: "There is only 1 member joined this draw!"
+  noOneJoined: "No one joined this draw Q_Q"
+  timeLeftToJoin: "{{ .timeLeft }} left to join!"
+  willChooseNumberOfPersons: "I will choose {{ .quantity }} persons for the prize {{ .prize }}..."
+  willChooseOnePerson: "I will choose 1 person for the prize {{ .prize }}..."
+  winnerIs: "The {{ .place }} winner is [{{- .winner.Username -}}](tg://user?id={{- .winner.ID -}})"
+  notifyWinner: "Congratulations! [{{- .winner.Username -}}](tg://user?id={{- .winner.ID -}}), you won the prize {{ .prize }}, please provide your account email to the lucky draw organizer [{{- .organizer.Username -}}](tg://user?id={{- .organizer.ID -}})"
+  allMembersGotTheirPrize: "All members have got their prize"
+  theDrawIsOver: "*The draw is over! thank you for joining this draw ~~!!*"
+  theDrawIsNotStartedYet: "The draw is not started yet"
+  theDrawIsAlreadyStartedAndHasNotStoppedYet: "The draw session is already created and has not stopped yet"

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -60,9 +61,9 @@ type PrizeEntry struct {
 	Winners  []*tb.User
 }
 
-func readConfig() (*Config, error) {
+func readConfig(configFile string) (*Config, error) {
 	var conf Config
-	yamlFile, err := ioutil.ReadFile("config.yaml")
+	yamlFile, err := ioutil.ReadFile(configFile)
 
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ type DrawSession struct {
 	MemberIDList            []int
 	PrizeEntries            []PrizeEntry
 	JoinDuration            time.Duration
-	PrizeDelay              time.Duration
+	PrizeAnnouncementDelay  time.Duration
 	WinnerAnnouncementDelay time.Duration
 	IsOver                  bool
 }
@@ -184,22 +185,25 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 		})
 	}
 
-	message, err := b.Send(m.Chat, b.Config.Messages.LuckyDrawStart, markdownOption)
+	session := &DrawSession{
+		Creator:                 m.Sender,
+		JoinedMembers:           make(map[int]*tb.User),
+		WinningMembers:          make(map[int]*tb.User),
+		PrizeEntries:            prizeEntries,
+		JoinDuration:            1 * time.Minute,
+		PrizeAnnouncementDelay:  3 * time.Second,
+		WinnerAnnouncementDelay: 3 * time.Second,
+	}
+
+	message, err := b.Send(m.Chat, format(b.Config.Messages.LuckyDrawStart, H{
+		"joinDuration": session.JoinDuration.String(),
+	}), markdownOption)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	session := &DrawSession{
-		Message:                 message,
-		Creator:                 m.Sender,
-		JoinedMembers:           make(map[int]*tb.User),
-		WinningMembers:          make(map[int]*tb.User),
-		PrizeEntries:            prizeEntries,
-		JoinDuration:            5 * time.Minute,
-		PrizeDelay:              5 * time.Second,
-		WinnerAnnouncementDelay: 10 * time.Second,
-	}
+	session.Message = message
 
 	b.mu.Lock()
 	b.sessions[m.Chat.ID] = session
@@ -225,7 +229,7 @@ WaitForJoin:
 			if timeLeft <= 3*time.Minute {
 				b.Send(session.Message.Chat, format(b.Config.Messages.TimeLeftForJoin, H{
 					"timeLeft": timeLeft,
-				}))
+				}), markdownOption)
 			}
 
 		case <-endC:
@@ -237,22 +241,22 @@ WaitForJoin:
 	defer session.mu.Unlock()
 
 	if len(session.JoinedMembers) == 0 {
-		b.Send(session.Message.Chat, format(b.Config.Messages.NoOneJoined, H{}))
+		b.Send(session.Message.Chat, format(b.Config.Messages.NoOneJoined, H{}), markdownOption)
 		return
 	} else if len(session.JoinedMembers) == 1 {
 		b.Send(session.Message.Chat, format(b.Config.Messages.ThereIsOneMemberJoined, H{
 			"numberOfMembers": len(session.JoinedMembers),
-		}))
+		}), markdownOption)
 	} else {
 		b.Send(session.Message.Chat, format(b.Config.Messages.ThereAreNMembersJoined, H{
 			"numberOfMembers": len(session.JoinedMembers),
-		}))
+		}), markdownOption)
 	}
 
 	for k, prizeEntry := range session.PrizeEntries {
 		// all members got their prizes, quit
 		if len(session.JoinedMembers) == 0 {
-			b.Send(session.Message.Chat, b.Config.Messages.AllMembersGotTheirPrize)
+			b.Send(session.Message.Chat, b.Config.Messages.AllMembersGotTheirPrize, markdownOption)
 			break
 		}
 
@@ -285,35 +289,36 @@ WaitForJoin:
 				format(b.Config.Messages.WillChooseOnePerson, H{
 					"quantity": prizeEntry.Quantity,
 					"prize":    prizeEntry.Name,
-				}))
+				}), markdownOption)
 		} else {
 			b.Send(session.Message.Chat,
 				format(b.Config.Messages.WillChooseNumberOfPersons, H{
 					"quantity": prizeEntry.Quantity,
 					"prize":    prizeEntry.Name,
-				}))
+				}), markdownOption)
 		}
 
-		<-time.After(session.PrizeDelay)
 		for idx, winner := range session.PrizeEntries[k].Winners {
-			<-time.After(session.WinnerAnnouncementDelay)
+			<-time.After(session.PrizeAnnouncementDelay)
 
 			place := translateOrdinalNumberToEnglish(idx + 1)
 			b.Send(session.Message.Chat,
 				format(b.Config.Messages.WinnerIs, H{
-					"place":    place,
-					"username": winner.Username,
-				}))
+					"place":  place,
+					"winner": winner,
+				}), markdownOption)
 
-			b.Send(winner, format(b.Config.Messages.NotifyWinner, H{
+			<-time.After(session.WinnerAnnouncementDelay)
+
+			b.Send(session.Message.Chat, format(b.Config.Messages.NotifyWinner, H{
 				"prize":     prizeEntry.Name,
-				"username":  winner.Username,
-				"organizer": session.Creator.Username,
-			}))
+				"winner":    winner,
+				"organizer": session.Creator,
+			}), markdownOption)
 		}
 	}
 
-	b.Send(session.Message.Chat, b.Config.Messages.TheDrawIsOver)
+	b.Send(session.Message.Chat, b.Config.Messages.TheDrawIsOver, markdownOption)
 	session.IsOver = true
 }
 
@@ -401,6 +406,10 @@ func format(fmtStr string, args interface{}) string {
 }
 
 func main() {
+	var configFile string
+	flag.StringVar(&configFile, "config", "config.yaml", "config file")
+	flag.Parse()
+
 	if _, err := os.Stat(".env.local"); err == nil {
 		if err := godotenv.Load(".env.local"); err != nil {
 			log.Fatal(err)
@@ -412,7 +421,7 @@ func main() {
 		log.Fatal("env TELEGRAM_BOT_TOKEN is not set")
 	}
 
-	conf, err := readConfig()
+	conf, err := readConfig(configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
