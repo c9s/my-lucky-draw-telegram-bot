@@ -8,7 +8,7 @@ messages:
   willChooseNumberOfPersons: "🎙 接下來獎項是 {{ .prize }}，我會抽出 {{ .quantity }} 位幸運者~~"
   willChooseOnePerson: "🎙 接下來獎項是 {{ .prize }}，只有一位幸運者~~ 🥁🥁🥁"
   winnerIs: "🎙 第 {{ .place_number }} 位得主是... 🥁🥁🥁"
-  notifyWinner: "🏅 恭喜 {{ .winner }} !! 🎉🎉🎉 你贏得了 {{ .prize }}!, 請提供你的帳號 E-mail 給主辦人 {{- .organizer -}} ~ 👏👏👏"
+  notifyWinner: "🏅 恭喜 {{ .winner }} !! 🎉🎉🎉 你贏得了 {{ .prize }}!, 請提供你的帳號 E-mail 給主辦人 {{ .organizer }} ~ 👏👏👏"
   allMembersGotTheirPrize: "🏅 所有的會員都已經抽中獎品 🎉"
   theDrawIsOver: "*抽獎活動已經結束，謝謝大家參加此次抽獎~~!!* 🎉🎉🎉"
   theDrawIsNotStartedYet: "✋ 抽獎活動還沒開始喔~"

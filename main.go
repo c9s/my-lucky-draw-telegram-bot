@@ -226,9 +226,16 @@ func (b *Bot) startDrawSession(session *DrawSession) {
 WaitForJoin:
 	for {
 		select {
+		case <-endC:
+			break WaitForJoin
+
 		case t := <-reportTimer.C:
 			elapsed := t.Sub(fromTime).Round(time.Minute)
 			timeLeft := session.JoinDuration - elapsed
+
+			if timeLeft.Minutes() < 1 {
+				break WaitForJoin
+			}
 
 			// last 3 minutes!
 			if timeLeft <= 3*time.Minute {
@@ -237,8 +244,6 @@ WaitForJoin:
 				}), markdownOption)
 			}
 
-		case <-endC:
-			break WaitForJoin
 		}
 	}
 
