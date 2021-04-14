@@ -33,6 +33,13 @@ var englishNumbers = []string{
 	"tenth",
 }
 
+var tossCupImgs = []string{
+	"https://i.imgur.com/Lrfi37a.jpg",
+	"https://i.imgur.com/HAb9sjh.jpg",
+	"https://i.imgur.com/Fy5hmD7.jpg",
+	"https://i.imgur.com/fPuAt7T.jpg",
+}
+
 type H map[string]interface{}
 
 func translateOrdinalNumberDefault(number int) string {
@@ -215,7 +222,7 @@ WaitForJoin:
 			timeLeft := session.JoinDuration - elapsed
 
 			// last 3 minutes!
-			if timeLeft <= 3 * time.Minute {
+			if timeLeft <= 3*time.Minute {
 				b.Send(session.Message.Chat, format(b.Config.Messages.TimeLeftForJoin, H{
 					"timeLeft": timeLeft,
 				}))
@@ -252,7 +259,7 @@ WaitForJoin:
 		available := prizeEntry.Quantity
 
 		// choose winners
-		for ; available > 0; {
+		for available > 0 {
 			if len(session.MemberIDList) == 0 || len(session.JoinedMembers) == 0 {
 				break
 			}
@@ -362,12 +369,19 @@ func (b *Bot) handleHelp() {
 
 }
 
+// Command Tosscup consume optional string and reply random baubei image
+func (b *Bot) handleTossCup(m *tb.Message) {
+	idx := rand.Intn(len(tossCupImgs))
+	b.Send(m.Chat, tossCupImgs[idx])
+}
+
 func (b *Bot) Start() {
 	// bot.Handle(tb.OnText, ListenCreated)
 	b.Handle("/start", b.handleStart)
 	b.Handle("/luckyDraw", b.handleLuckyDraw)
 	b.Handle("/joinDraw", b.handleJoinDraw)
-	b.Handle("/help", b.handleHelp)
+	b.Handle("/toss", b.handleTossCup)
+	//b.Handle("/help", b.handleHelp)
 	b.Handle(tb.OnText, b.handleText)
 
 	log.Println("bot started")
