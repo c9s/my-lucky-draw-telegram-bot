@@ -195,7 +195,7 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 		JoinedMembers:           make(map[int]*tb.User),
 		WinningMembers:          make(map[int]*tb.User),
 		PrizeEntries:            prizeEntries,
-		JoinDuration:            1 * time.Minute,
+		JoinDuration:            3 * time.Minute,
 		PrizeAnnouncementDelay:  3 * time.Second,
 		WinnerAnnouncementDelay: 3 * time.Second,
 	}
