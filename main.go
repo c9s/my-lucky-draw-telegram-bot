@@ -251,11 +251,19 @@ func (b *Bot) startDrawSession(session *DrawSession) {
 			available--
 		}
 
-		b.Send(session.Message.Chat,
-			format(b.Config.Messages.WillChooseNumberOfPeople, H{
-				"quantity": prizeEntry.Quantity,
-				"prize":    prizeEntry.Name,
-			}))
+		if prizeEntry.Quantity == 1 {
+			b.Send(session.Message.Chat,
+				format(b.Config.Messages.WillChooseOnePerson, H{
+					"quantity": prizeEntry.Quantity,
+					"prize":    prizeEntry.Name,
+				}))
+		} else {
+			b.Send(session.Message.Chat,
+				format(b.Config.Messages.WillChooseNumberOfPersons, H{
+					"quantity": prizeEntry.Quantity,
+					"prize":    prizeEntry.Name,
+				}))
+		}
 
 		<-time.After(session.PrizeDelay)
 		for idx, winner := range session.PrizeEntries[k].Winners {
