@@ -44,10 +44,10 @@ var englishNumbers = []string{
 }
 
 var tossCupImgs = []string{
-	"https://i.imgur.com/Lrfi37a.jpg",
-	"https://i.imgur.com/HAb9sjh.jpg",
-	"https://i.imgur.com/Fy5hmD7.jpg",
-	"https://i.imgur.com/fPuAt7T.jpg",
+	"https://i.imgur.com/jZ5W7QH.jpg",
+	"https://i.imgur.com/sMTszNU.jpg",
+	"https://i.imgur.com/kM4GQQu.jpg",
+	"https://i.imgur.com/h2MH0jJ.jpg",
 }
 
 type H map[string]interface{}
