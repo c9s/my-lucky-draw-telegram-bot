@@ -1,6 +1,6 @@
 ---
 messages:
-  luckyDrawStart: "🥁🥁🥁  抽獎活動開始!!! 欲參加此次抽獎活動，請在 {{ .joinDuration }} 分鐘內，*回覆* 這則訊息或回覆 /joinDraw 🥁🥁🥁"
+  luckyDrawStart: "🥁🥁🥁  抽獎活動開始!!! 欲參加此次抽獎活動，請在 {{ .joinDuration }} 分鐘內，請 *回覆* 這則訊息留下你的祈福語 🥁🥁🥁"
   thereAreNMembersJoined: "🥁 有 {{ .numberOfMembers }} 位會員參加此次抽獎! 👯👯👯"
   thereIsOneMemberJoined: "🥁 只有一位會員參加此次抽獎! 👯👯👯"
   noOneJoined: "沒有任何人參加此次抽獎 🥺"

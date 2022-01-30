@@ -87,9 +87,9 @@ type DrawSession struct {
 
 	Message                 *tb.Message
 	Organizer               *tb.User
-	JoinedMembers           map[int]*tb.User
-	WinningMembers          map[int]*tb.User
-	MemberIDList            []int
+	JoinedMembers           map[int64]*tb.User
+	WinningMembers          map[int64]*tb.User
+	MemberIDList            []int64
 	PrizeEntries            []PrizeEntry
 	JoinDuration            time.Duration
 	PrizeAnnouncementDelay  time.Duration
@@ -192,8 +192,8 @@ func (b *Bot) handleLuckyDraw(m *tb.Message) {
 
 	session := &DrawSession{
 		Organizer:               m.Sender,
-		JoinedMembers:           make(map[int]*tb.User),
-		WinningMembers:          make(map[int]*tb.User),
+		JoinedMembers:           make(map[int64]*tb.User),
+		WinningMembers:          make(map[int64]*tb.User),
 		PrizeEntries:            prizeEntries,
 		JoinDuration:            3 * time.Minute,
 		PrizeAnnouncementDelay:  3 * time.Second,
